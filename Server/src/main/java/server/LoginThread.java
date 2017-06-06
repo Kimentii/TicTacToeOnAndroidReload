@@ -1,3 +1,5 @@
+package server;
+
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.sql.Connection;
@@ -37,7 +39,7 @@ public class LoginThread extends Thread {
                         outputStream.writeUTF(res.getString("password"));
                         outputStream.writeUTF(((Integer) res.getInt("wins")).toString());
                         outputStream.writeUTF(((Integer) res.getInt("draws")).toString());
-                        outputStream.writeUTF(((Integer) res.getInt("login")).toString());
+                        outputStream.writeUTF(((Integer) res.getInt("losses")).toString());
                         break;
                     } else {
                         outputStream.writeUTF("bad");

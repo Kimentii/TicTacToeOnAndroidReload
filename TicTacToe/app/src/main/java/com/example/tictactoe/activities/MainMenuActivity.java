@@ -23,7 +23,7 @@ public class MainMenuActivity extends AppCompatActivity {
             switch (view.getId()) {
                 case R.id.play_button:
                     client.setSemaphore(null);
-                    Intent intent = new Intent(getApplicationContext(), Game.class);
+                    Intent intent = new Intent(getApplicationContext(), GameActivity.class);
                     startActivity(intent);
             }
         }
@@ -37,6 +37,7 @@ public class MainMenuActivity extends AppCompatActivity {
         playButton = (Button) findViewById(R.id.play_button);
         statusButton = (Button) findViewById(R.id.status_button);
         exitButton = (Button) findViewById(R.id.exit_button);
+        playButton.setOnClickListener(new Listener());
 
         client = StartActivity.client;
     }

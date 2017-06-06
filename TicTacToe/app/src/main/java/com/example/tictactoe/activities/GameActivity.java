@@ -1,6 +1,7 @@
 package com.example.tictactoe.activities;
 
 import android.content.Intent;
+import android.graphics.Color;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.view.View;
@@ -13,9 +14,12 @@ import android.widget.TextView;
 import com.example.tictactoe.R;
 import com.example.tictactoe.client.Client;
 
-public class Game extends AppCompatActivity {
+import org.w3c.dom.Text;
+
+public class GameActivity extends AppCompatActivity {
 
     static Client client;
+    TextView text;
     private Button[][] field;
 
     public class Listener implements View.OnClickListener {
@@ -29,7 +33,24 @@ public class Game extends AppCompatActivity {
 
         @Override
         public void onClick(View view) {
+            if (client.isGameStarted()) {
+                if (field[x][y].length() == 0) {
+                    shutDownButtons();
+                    field[x][y].setText(client.getPlayerSymbol());
+                    client.write(((Integer) x).toString(), ((Integer) y).toString());
+                }
+            } else {
+                text.setText("wait other player");
+                text.setTextColor(Color.RED);
+            }
+        }
+    }
 
+    public void shutDownButtons() {
+        for (int i = 0; i < field.length; i++) {
+            for (int j = 0; j < field[i].length; j++) {
+                field[i][j].setClickable(false);
+            }
         }
     }
 
@@ -45,7 +66,7 @@ public class Game extends AppCompatActivity {
         field[2][1] = (Button) findViewById(R.id.button8);
         field[2][2] = (Button) findViewById(R.id.button9);
         for (int i = 0; i < field.length; i++) {
-            for (int j = 0; j < field[0].length; j++) {
+            for (int j = 0; j < field[i].length; j++) {
                 field[i][j].setOnClickListener(new Listener(i, j));
             }
         }
@@ -56,8 +77,12 @@ public class Game extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_game);
 
-        buildGameField();
-
         client = MainMenuActivity.client;
+        text = (TextView) findViewById(R.id.game_text);
+        buildGameField();
+        shutDownButtons();
+        client.setField(field);
+        client.setGameText(text);
+        client.write("want_play");
     }
 }

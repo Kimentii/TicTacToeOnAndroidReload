@@ -24,7 +24,7 @@
         </activity>
         <activity android:name=".activities.SignUpActivity" />
         <activity android:name=".activities.MainMenuActivity" />
-        <activity android:name=".activities.Game"></activity>
+        <activity android:name=".activities.GameActivity"></activity>
     </application>
 
 </manifest>

@@ -3,6 +3,8 @@ package com.example.tictactoe.client;
 import android.os.AsyncTask;
 import android.os.Parcel;
 import android.os.Parcelable;
+import android.widget.Button;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import java.io.DataInputStream;
@@ -26,6 +28,11 @@ public class Client extends AsyncTask<Void, String, Void> {
     DataOutputStream outputStream;
     private boolean isConnected;
     private boolean isLoggedIn;
+    private boolean isGameStarted;
+    String playerSymbol;
+    String opponentSymbol;
+    Button[][] field;
+    TextView gameText;
     Player player;
 
     public Client(Toast t, Semaphore s) {
@@ -42,12 +49,28 @@ public class Client extends AsyncTask<Void, String, Void> {
         semaphore = s;
     }
 
+    public void setField(Button[][] field) {
+        this.field = field;
+    }
+
+    public void setGameText(TextView gameText) {
+        this.gameText = gameText;
+    }
+
+    public String getPlayerSymbol() {
+        return playerSymbol;
+    }
+
     public boolean isConnected() {
         return isConnected;
     }
 
     public boolean isLoggedIn() {
         return isLoggedIn;
+    }
+
+    public boolean isGameStarted() {
+        return isGameStarted;
     }
 
     public void write(String mes) {
@@ -68,6 +91,33 @@ public class Client extends AsyncTask<Void, String, Void> {
             }
         } catch (IOException e) {
             e.printStackTrace();
+        }
+    }
+
+    public void turnOnButtons() {
+        if (field != null) {
+            for (int i = 0; i < field.length; i++) {
+                for (int j = 0; j < field[i].length; j++) {
+                    field[i][j].setClickable(true);
+                }
+            }
+        }
+    }
+
+    public void shutDownButtons() {
+        if (field != null) {
+            for (int i = 0; i < field.length; i++) {
+                for (int j = 0; j < field[i].length; j++) {
+                    field[i][j].setClickable(false);
+                }
+            }
+        }
+    }
+
+    private void resetGameField() {
+        for (int i = 0; i < field.length; i++) {
+            for (int j = 0; j < field[i].length; j++)
+                field[i][j].setText("");
         }
     }
 
@@ -115,8 +165,56 @@ public class Client extends AsyncTask<Void, String, Void> {
                 repeat = false;
             }
         }
+
         try {
             String message = inputStream.readUTF();
+            if (message.equals("start_game")) {
+                isGameStarted = true;
+                playerSymbol = inputStream.readUTF();
+                if (playerSymbol.equals("X")) {
+                    publishProgress("toast", "you are X");
+                    publishProgress("text", "your turn");
+                    opponentSymbol = "O";
+                    turnOnButtons();
+                } else {
+                    publishProgress("toast", "you are O");
+                    publishProgress("text", "wait");
+                    opponentSymbol = "X";
+                }
+                System.out.println("I'm " + playerSymbol);
+                System.out.println("My opponent is " + opponentSymbol);
+                String x, y;
+                while (true) {
+                    x = inputStream.readUTF();
+                    if (x.equals("closed")) {
+                        throw new java.io.EOFException();
+                    }
+                    if (x.equals("winner")) {
+                        publishProgress("toast", inputStream.readUTF() + "wins");
+                        publishProgress("reset_game_field");
+                        if (playerSymbol.equals("O"))
+                            publishProgress("shut_down_buttons");
+                        else
+                            publishProgress("turn_on_buttons");
+                        continue;
+                    }
+                    if (x.equals("draw")) {
+                        publishProgress("toast", "draw");
+                        publishProgress("reset_game_field");
+                        if (playerSymbol.equals("O"))
+                            publishProgress("shut_down_buttons");
+                        else
+                            publishProgress("turn_on_buttons");
+                        continue;
+                    }
+                    y = inputStream.readUTF();
+                    System.out.println("Client:" + x);
+                    System.out.println("Client:" + y);
+                    publishProgress("step", x, y);
+                    turnOnButtons();
+                }
+
+            }
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -125,14 +223,33 @@ public class Client extends AsyncTask<Void, String, Void> {
     }
 
     @Override
-    protected void onProgressUpdate(String... values) {
-        super.onProgressUpdate(values);
-        switch (values[0]) {
+    protected void onProgressUpdate(String... strings) {
+        super.onProgressUpdate(strings);
+        switch (strings[0]) {
             case "toast":
                 if (toast != null) {
-                    toast.setText(values[1]);
+                    toast.setText(strings[1]);
                     toast.show();
                 }
+                break;
+            case "step":
+                int x, y;
+                x = Integer.parseInt(strings[1]);
+                y = Integer.parseInt(strings[2]);
+                field[x][y].setText(opponentSymbol);
+                break;
+            case "text":
+                if (gameText != null) gameText.setText(strings[1]);
+                break;
+            case "reset_game_field":
+                resetGameField();
+                break;
+            case "shut_down_buttons":
+                shutDownButtons();
+                break;
+            case "turn_on_buttons":
+                turnOnButtons();
+                break;
         }
     }
 }
