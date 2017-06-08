@@ -31,7 +31,7 @@ public class SignUpActivity extends AppCompatActivity {
                 if (loginEditText.getText().length() > 0) {
                     if (passwordEditText.getText().length() > 0) {
                         if(passwordEditText.getText().toString().equals(repeatPasswordEditText.getText().toString())) {
-                            client.write("sign up");
+                            client.write("sign_up");
                             client.write(loginEditText.getText().toString(), passwordEditText.getText().toString());
                             try {
                                 semaphore.acquire();
@@ -64,6 +64,10 @@ public class SignUpActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_sign_up);
+        client = StartActivity.client;
+        semaphore = new Semaphore(1);
+        semaphore.tryAcquire();
+        client.setSemaphore(semaphore);
 
         signUpButton = (Button) findViewById(R.id.sign_up_button2);
         signUpButton.setOnClickListener(new Listener());
@@ -72,10 +76,5 @@ public class SignUpActivity extends AppCompatActivity {
         passwordEditText = (EditText) findViewById(R.id.password_sing_up);
         repeatPasswordEditText = (EditText) findViewById(R.id.repeat_password_sing_up);
         text = (TextView) findViewById(R.id.sign_up_text);
-
-        client = StartActivity.client;
-        semaphore = new Semaphore(1);
-        semaphore.tryAcquire();
-        client.setSemaphore(semaphore);
     }
 }

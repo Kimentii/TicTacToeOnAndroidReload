@@ -18,9 +18,24 @@ import org.w3c.dom.Text;
 
 public class GameActivity extends AppCompatActivity {
 
+    Button mainMenuButton;
     static Client client;
     TextView text;
     private Button[][] field;
+
+    public class MainMenuButtonListener implements View.OnClickListener {
+
+        @Override
+        public void onClick(View view) {
+            client.write("end_game");
+            client.setGameText(null);
+            client.setField(null);
+            client.setMainMenuButton(null);
+            Intent intent = new Intent(getApplicationContext(), MainMenuActivity.class);
+            startActivity(intent);
+            finish();
+        }
+    }
 
     public class Listener implements View.OnClickListener {
         int x;
@@ -36,7 +51,9 @@ public class GameActivity extends AppCompatActivity {
             if (client.isGameStarted()) {
                 if (field[x][y].length() == 0) {
                     shutDownButtons();
+                    mainMenuButton.setClickable(false);
                     field[x][y].setText(client.getPlayerSymbol());
+                    text.setText("wait");
                     client.write(((Integer) x).toString(), ((Integer) y).toString());
                 }
             } else {
@@ -47,9 +64,11 @@ public class GameActivity extends AppCompatActivity {
     }
 
     public void shutDownButtons() {
-        for (int i = 0; i < field.length; i++) {
-            for (int j = 0; j < field[i].length; j++) {
-                field[i][j].setClickable(false);
+        synchronized (field) {
+            for (int i = 0; i < field.length; i++) {
+                for (int j = 0; j < field[i].length; j++) {
+                    field[i][j].setClickable(false);
+                }
             }
         }
     }
@@ -70,19 +89,24 @@ public class GameActivity extends AppCompatActivity {
                 field[i][j].setOnClickListener(new Listener(i, j));
             }
         }
+        mainMenuButton.setClickable(false);
     }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_game);
+        client = StartActivity.client;
 
-        client = MainMenuActivity.client;
         text = (TextView) findViewById(R.id.game_text);
+        mainMenuButton = (Button) findViewById(R.id.button_to_main_menu);
+        mainMenuButton.setOnClickListener(new MainMenuButtonListener());
         buildGameField();
         shutDownButtons();
         client.setField(field);
+        client.setMainMenuButton(mainMenuButton);
         client.setGameText(text);
+
         client.write("want_play");
     }
 }

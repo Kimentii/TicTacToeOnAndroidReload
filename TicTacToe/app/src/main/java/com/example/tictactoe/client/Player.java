@@ -14,4 +14,32 @@ public class Player {
         this.draws = draws;
         this.losses = losses;
     }
+
+    public String getLogin() {
+        return login;
+    }
+
+    public int getWins() {
+        return wins;
+    }
+
+    public int getDraws() {
+        return draws;
+    }
+
+    public int getLosses() {
+        return losses;
+    }
+
+    public void incrementWins() {
+        wins++;
+    }
+
+    public void incrementDraws() {
+        draws++;
+    }
+
+    public void incrementLosses() {
+        losses++;
+    }
 }

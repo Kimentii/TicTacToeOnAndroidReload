@@ -32,6 +32,7 @@ public class Client extends AsyncTask<Void, String, Void> {
     String playerSymbol;
     String opponentSymbol;
     Button[][] field;
+    Button mainMenuButton;
     TextView gameText;
     Player player;
 
@@ -53,6 +54,10 @@ public class Client extends AsyncTask<Void, String, Void> {
         this.field = field;
     }
 
+    public void setMainMenuButton(Button mainMenuButton) {
+        this.mainMenuButton = mainMenuButton;
+    }
+
     public void setGameText(TextView gameText) {
         this.gameText = gameText;
     }
@@ -71,6 +76,10 @@ public class Client extends AsyncTask<Void, String, Void> {
 
     public boolean isGameStarted() {
         return isGameStarted;
+    }
+
+    public Player getPlayer() {
+        return player;
     }
 
     public void write(String mes) {
@@ -95,30 +104,19 @@ public class Client extends AsyncTask<Void, String, Void> {
     }
 
     public void turnOnButtons() {
-        if (field != null) {
-            for (int i = 0; i < field.length; i++) {
-                for (int j = 0; j < field[i].length; j++) {
-                    field[i][j].setClickable(true);
-                }
-            }
-        }
+        publishProgress("turn_on_buttons");
+    }
+
+    public void turnOnMainMenuButton() {
+        publishProgress("turn_on_main_menu_button");
     }
 
     public void shutDownButtons() {
-        if (field != null) {
-            for (int i = 0; i < field.length; i++) {
-                for (int j = 0; j < field[i].length; j++) {
-                    field[i][j].setClickable(false);
-                }
-            }
-        }
+        publishProgress("shut_down_buttons");
     }
 
     private void resetGameField() {
-        for (int i = 0; i < field.length; i++) {
-            for (int j = 0; j < field[i].length; j++)
-                field[i][j].setText("");
-        }
+        publishProgress("reset_game_field");
     }
 
     private void connect() {
@@ -137,88 +135,122 @@ public class Client extends AsyncTask<Void, String, Void> {
         }
     }
 
+    public void closeSocket() {
+        if (clientSocket != null && clientSocket.isConnected()) {
+            try {
+                clientSocket.shutdownInput();
+                clientSocket.shutdownOutput();
+                clientSocket.close();
+                System.out.println("client is closed");
+            } catch (java.net.SocketException e) {
+                try {
+                    clientSocket.close();
+                } catch (IOException e1) {
+                    e1.printStackTrace();
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
+    }
+
     @Override
     protected Void doInBackground(Void... voids) {
         connect();
         if (!isConnected()) return null;
-        boolean repeat = true;
-        while (repeat) {
+        while (true) {
             try {
-                String res = inputStream.readUTF();
-                if (res.equals("good")) {
-                    String log, pas;
-                    int w, d, l;
-                    log = inputStream.readUTF();
-                    pas = inputStream.readUTF();
-                    w = Integer.parseInt(inputStream.readUTF());
-                    d = Integer.parseInt(inputStream.readUTF());
-                    l = Integer.parseInt(inputStream.readUTF());
-                    player = new Player(log, pas, w, d, l);
-                    isLoggedIn = true;
-                    repeat = false;
-                } else {
-                    isLoggedIn = false;
+                String message = inputStream.readUTF();
+                System.out.println("mes:" + message);
+                if (message.equals("exit")) break;
+                if (message.equals("authorization")) {
+                    String ans = inputStream.readUTF();
+                    System.out.println(ans);
+                    if (ans.equals("good")) {
+                        String log, pas;
+                        int w, d, l;
+                        log = inputStream.readUTF();
+                        pas = inputStream.readUTF();
+                        w = Integer.parseInt(inputStream.readUTF());
+                        d = Integer.parseInt(inputStream.readUTF());
+                        l = Integer.parseInt(inputStream.readUTF());
+                        player = new Player(log, pas, w, d, l);
+                        isLoggedIn = true;
+                    } else {
+                        isLoggedIn = false;
+                    }
+                    semaphore.release();
+                } else if (message.equals("deleting_player")) {
+                    if (!inputStream.readUTF().toString().equals("good")) {
+                        if (toast != null) {
+                            toast.setText("can't delete");
+                            toast.show();
+                        }
+                    }
+                } else if (message.equals("start_game")) {
+                    isGameStarted = true;
+                    playerSymbol = inputStream.readUTF();
+                    if (playerSymbol.equals("X")) {
+                        publishProgress("toast", "you are X");
+                        publishProgress("text", "your turn");
+                        opponentSymbol = "O";
+                        turnOnButtons();
+                    } else {
+                        publishProgress("toast", "you are O");
+                        publishProgress("text", "wait");
+                        opponentSymbol = "X";
+                    }
+                    System.out.println("I'm " + playerSymbol);
+                    System.out.println("My opponent is " + opponentSymbol);
+                    String x, y;
+                    while (true) {
+                        x = inputStream.readUTF();
+                        if (x.equals("end_game")) {
+                            publishProgress("text", "opponent came out");
+                            publishProgress("turn_on_main_menu_button");
+                            isGameStarted = false;
+                            break;
+                        }
+                        if (x.equals("winner")) {
+                            String winner = inputStream.readUTF();
+                            publishProgress("toast", winner + " wins");
+                            resetGameField();
+                            if (playerSymbol.equals(winner))
+                                player.incrementWins();
+                            else
+                                player.incrementLosses();
+                            if (playerSymbol.equals("O"))
+                                shutDownButtons();
+                            else
+                                turnOnButtons();
+                            continue;
+                        }
+                        if (x.equals("draw")) {
+                            System.out.println("Draw");
+                            publishProgress("toast", "draw");
+                            resetGameField();
+                            player.incrementDraws();
+                            if (playerSymbol.equals("O"))
+                                shutDownButtons();
+                            else
+                                turnOnButtons();
+                            continue;
+                        }
+                        y = inputStream.readUTF();
+                        System.out.println("Client:" + x);
+                        System.out.println("Client:" + y);
+                        publishProgress("step", x, y);
+                        publishProgress("text", "your turn");
+                        turnOnButtons();
+                    }
                 }
-                semaphore.release();
             } catch (IOException e) {
                 e.printStackTrace();
-                repeat = false;
+                break;
             }
         }
-
-        try {
-            String message = inputStream.readUTF();
-            if (message.equals("start_game")) {
-                isGameStarted = true;
-                playerSymbol = inputStream.readUTF();
-                if (playerSymbol.equals("X")) {
-                    publishProgress("toast", "you are X");
-                    publishProgress("text", "your turn");
-                    opponentSymbol = "O";
-                    turnOnButtons();
-                } else {
-                    publishProgress("toast", "you are O");
-                    publishProgress("text", "wait");
-                    opponentSymbol = "X";
-                }
-                System.out.println("I'm " + playerSymbol);
-                System.out.println("My opponent is " + opponentSymbol);
-                String x, y;
-                while (true) {
-                    x = inputStream.readUTF();
-                    if (x.equals("closed")) {
-                        throw new java.io.EOFException();
-                    }
-                    if (x.equals("winner")) {
-                        publishProgress("toast", inputStream.readUTF() + "wins");
-                        publishProgress("reset_game_field");
-                        if (playerSymbol.equals("O"))
-                            publishProgress("shut_down_buttons");
-                        else
-                            publishProgress("turn_on_buttons");
-                        continue;
-                    }
-                    if (x.equals("draw")) {
-                        publishProgress("toast", "draw");
-                        publishProgress("reset_game_field");
-                        if (playerSymbol.equals("O"))
-                            publishProgress("shut_down_buttons");
-                        else
-                            publishProgress("turn_on_buttons");
-                        continue;
-                    }
-                    y = inputStream.readUTF();
-                    System.out.println("Client:" + x);
-                    System.out.println("Client:" + y);
-                    publishProgress("step", x, y);
-                    turnOnButtons();
-                }
-
-            }
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-
+        isConnected = false;
+        closeSocket();
         return null;
     }
 
@@ -242,13 +274,33 @@ public class Client extends AsyncTask<Void, String, Void> {
                 if (gameText != null) gameText.setText(strings[1]);
                 break;
             case "reset_game_field":
-                resetGameField();
+                for (int i = 0; i < field.length; i++) {
+                    for (int j = 0; j < field[i].length; j++)
+                        field[i][j].setText("");
+                }
                 break;
             case "shut_down_buttons":
-                shutDownButtons();
+                if (field != null) {
+                    for (int i = 0; i < field.length; i++) {
+                        for (int j = 0; j < field[i].length; j++) {
+                            field[i][j].setClickable(false);
+                        }
+                    }
+                }
+                if (mainMenuButton != null) mainMenuButton.setClickable(false);
                 break;
             case "turn_on_buttons":
-                turnOnButtons();
+                if (field != null) {
+                    for (int i = 0; i < field.length; i++) {
+                        for (int j = 0; j < field[i].length; j++) {
+                            field[i][j].setClickable(true);
+                        }
+                    }
+                }
+                if (mainMenuButton != null) mainMenuButton.setClickable(true);
+                break;
+            case "turn_on_main_menu_button":
+                if (mainMenuButton != null) mainMenuButton.setClickable(true);
                 break;
         }
     }

@@ -20,6 +20,7 @@ public class StartActivity extends AppCompatActivity {
 
     Button signInButton;
     Button signUpButton;
+    Button exitButton;
     EditText loginEditText;
     EditText passwordEditText;
     TextView text;
@@ -34,10 +35,11 @@ public class StartActivity extends AppCompatActivity {
                     client.setSemaphore(null);
                     intent = new Intent(getApplicationContext(), SignUpActivity.class);
                     startActivity(intent);
+                    finish();
                     break;
                 case R.id.sign_in_button:
                     if (client.isConnected()) {
-                        client.write("sign in");
+                        client.write("sign_in");
                         client.write(loginEditText.getText().toString(), passwordEditText.getText().toString());
                         try {
                             semaphore.acquire();
@@ -56,6 +58,12 @@ public class StartActivity extends AppCompatActivity {
                         text.setText("you are not connected");
                     }
                     break;
+                case R.id.button_exit_start_activity:
+                    if(client.isConnected()){
+                        client.write("exit");
+                    }
+                    client = null;
+                    finish();
             }
         }
     }
@@ -69,15 +77,20 @@ public class StartActivity extends AppCompatActivity {
         signInButton.setOnClickListener(new Listener());
         signUpButton = (Button) findViewById(R.id.sign_up_button);
         signUpButton.setOnClickListener(new Listener());
+        exitButton = (Button) findViewById(R.id.button_exit_start_activity);
+        exitButton.setOnClickListener(new Listener());
 
         loginEditText = (EditText) findViewById(R.id.login_sign_in);
         passwordEditText = (EditText) findViewById(R.id.password_sign_in);
         text = (TextView) findViewById(R.id.welcome_text);
 
-        Toast toast = Toast.makeText(StartActivity.this, "", Toast.LENGTH_SHORT);
         semaphore = new Semaphore(1);
         semaphore.tryAcquire();
-        client = new Client(toast, semaphore);
-        client.execute();
+        if (client == null || !client.isConnected()) {
+            Toast toast = Toast.makeText(StartActivity.this, "", Toast.LENGTH_SHORT);
+            client = new Client(toast, semaphore);
+            client.execute();
+        } else client.setSemaphore(semaphore);
+        client.setGameText(text);
     }
 }

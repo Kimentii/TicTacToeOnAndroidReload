@@ -7,4 +7,9 @@
     <string name="exit_button">exit</string>
     <string name="welcome_text">welcome to tic-tac-toe</string>
     <string name="sign_up_text">enter your information</string>
+    <string name="delete_profile_button">Delete profile</string>
+    <string name="edit_profile_button">Change password</string>
+    <string name="edit_button">exit</string>
+    <string name="button_main_menu">to main menu</string>
+    <string name="button_main_menu2">To main menu</string>
 </resources>
